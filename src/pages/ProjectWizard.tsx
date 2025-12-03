@@ -8,6 +8,7 @@ import { Step2Budget } from '../components/wizard/Step2Budget';
 import { Step3GrossMargin } from '../components/wizard/Step3GrossMargin';
 import { Step4Demand } from '../components/wizard/Step4Demand';
 import { Step5Review } from '../components/wizard/Step5Review';
+import { FloatingAssistant, SuggestionToasts } from '../components/assistant';
 import { ToastContainer, useToast } from '../components/ui/Toast';
 import { AlertModal } from '../components/ui/Modal';
 
@@ -117,6 +118,10 @@ export function ProjectWizard() {
           <ArrowRight size={18} />
         </button>
       </div>
+
+      {/* AI Assistant */}
+      <FloatingAssistant />
+      <SuggestionToasts />
 
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
 
