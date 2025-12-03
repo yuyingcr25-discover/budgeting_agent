@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CheckCircle, AlertCircle, AlertTriangle, Download, Send } from 'lucide-react';
 import { useProjectStore } from '../../store/projectStore';
 import {
@@ -5,8 +6,14 @@ import {
   getIndustryById,
   GROSS_MARGIN_TARGET,
 } from '../../data/referenceData';
+import { AlertModal } from '../ui/Modal';
+import { ToastContainer, useToast } from '../ui/Toast';
 
 export function Step5Review() {
+  const toast = useToast();
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const {
     currentProject,
     setCurrentProject,
@@ -81,11 +88,11 @@ export function Step5Review() {
 
   const handleSubmit = () => {
     if (criticalErrors.length > 0) {
-      alert('Please resolve all errors before submitting');
+      setShowErrorModal(true);
       return;
     }
     setCurrentProject({ status: 'Submitted' });
-    alert('Project submitted for approval!');
+    setShowSuccessModal(true);
   };
 
   return (
@@ -270,6 +277,24 @@ export function Step5Review() {
           Submit for Approval
         </button>
       </div>
+
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+
+      <AlertModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Cannot Submit"
+        variant="error"
+        message="Please resolve all errors before submitting the project."
+      />
+
+      <AlertModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Project Submitted"
+        variant="success"
+        message="Your project has been submitted for approval. You will be notified once it has been reviewed."
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
@@ -9,10 +9,18 @@ import { Step3GrossMargin } from '../components/wizard/Step3GrossMargin';
 import { Step4Demand } from '../components/wizard/Step4Demand';
 import { Step5Review } from '../components/wizard/Step5Review';
 import { FloatingAssistant, SuggestionToasts } from '../components/assistant';
+import { ToastContainer, useToast } from '../components/ui/Toast';
+import { AlertModal } from '../components/ui/Modal';
 
 export function ProjectWizard() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; errors: string[] }>({
+    isOpen: false,
+    errors: [],
+  });
+
   const {
     currentProject,
     currentStep,
@@ -31,14 +39,17 @@ export function ProjectWizard() {
 
   const handleSave = () => {
     saveProject();
-    alert('Project saved!');
+    toast.success('Project saved successfully!');
   };
 
   const handleNext = () => {
     const validation = validateStep(currentStep);
-    if (validation.errors.filter((e) => e.severity === 'error').length > 0) {
-      alert('Please fix errors before proceeding:\n' +
-        validation.errors.map((e) => `• ${e.message}`).join('\n'));
+    const errors = validation.errors.filter((e) => e.severity === 'error');
+    if (errors.length > 0) {
+      setErrorModal({
+        isOpen: true,
+        errors: errors.map((e) => e.message),
+      });
       return;
     }
     nextStep();
@@ -111,6 +122,22 @@ export function ProjectWizard() {
       {/* AI Assistant */}
       <FloatingAssistant />
       <SuggestionToasts />
+
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+
+      <AlertModal
+        isOpen={errorModal.isOpen}
+        onClose={() => setErrorModal({ isOpen: false, errors: [] })}
+        title="Please Fix Errors"
+        variant="error"
+        message={
+          <ul>
+            {errorModal.errors.map((error, i) => (
+              <li key={i}>{error}</li>
+            ))}
+          </ul>
+        }
+      />
     </div>
   );
 }
