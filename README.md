@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# Project Setup Workbook (PSW)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web application for managing project setup workbooks, including budgeting, resource demand planning, and gross margin calculations.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Project Management**: Create, edit, and track project setup workbooks
+- **5-Step Wizard**:
+  1. **Project Setup** - SAP project lookup, industry/RM selection, template selection
+  2. **Budget Entry** - Work packages, work items, role-based hours grid
+  3. **Gross Margin Calculator** - Revenue/cost breakdown, subcontractors, expenses
+  4. **Resource Demand** - Weekly scheduling grid for resource planning
+  5. **Review & Validation** - Summary with SAP/ProFinda export capabilities
+- **Dark Mode** - Full light/dark theme support
+- **Responsive Design** - Works on desktop and tablet devices
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React 18** with TypeScript
+- **Vite** for fast development and builds
+- **Zustand** for state management (with localStorage persistence)
+- **React Router** for navigation
+- **Lucide React** for icons
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm or yarn
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Clone the repository
+git clone https://github.com/tbharthur/psw.git
+cd psw
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app will be available at http://localhost:5173
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── layout/         # Header, navigation
+│   └── wizard/         # Step 1-5 components
+├── data/
+│   └── referenceData.ts  # Roles, industries, locations, templates
+├── pages/
+│   ├── Dashboard.tsx   # Project list
+│   └── ProjectWizard.tsx # Main wizard container
+├── store/
+│   ├── projectStore.ts # Project state management
+│   └── themeStore.ts   # Theme state management
+├── types/
+│   └── index.ts        # TypeScript interfaces
+├── App.tsx             # Router setup
+└── App.css             # Design system & styles
+```
+
+## License
+
+Private - All rights reserved
