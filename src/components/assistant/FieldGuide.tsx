@@ -4,6 +4,8 @@ import type { Driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import { useAssistantStore } from '../../store/assistantStore';
 import { useProjectStore } from '../../store/projectStore';
+import { industries, budgetTemplates, resourceManagers } from '../../data/referenceData';
+import type { FieldSuggestion } from '../../services/ai';
 
 export interface GuideField {
   id: string;
@@ -77,6 +79,114 @@ export const step4Fields: GuideField[] = [
   },
 ];
 
+// Generate suggestions for a specific field based on project context
+export function generateFieldSuggestions(
+  fieldId: string,
+  projectData: Record<string, unknown>
+): FieldSuggestion[] {
+  const suggestions: FieldSuggestion[] = [];
+  const deliveryOrg = projectData.deliveryServiceOrg as string;
+
+  switch (fieldId) {
+    case 'industry': {
+      // Suggest industry based on delivery org or default to common ones
+      const suggestedIndustries = deliveryOrg === 'Tax'
+        ? industries.filter(i => ['Financial Services', 'Private Client Services', 'Technology'].includes(i.name))
+        : deliveryOrg === 'GCS'
+        ? industries.filter(i => ['Technology', 'Financial Services', 'HealthCare'].includes(i.name))
+        : industries.slice(0, 3);
+
+      suggestedIndustries.forEach(ind => {
+        suggestions.push({
+          fieldId: 'industryId',
+          fieldName: 'Industry',
+          value: ind.id,
+          displayValue: ind.name,
+          confidence: deliveryOrg ? 'medium' : 'low',
+        });
+      });
+      break;
+    }
+
+    case 'resourceManager': {
+      // Suggest first few resource managers
+      resourceManagers.slice(0, 3).forEach(rm => {
+        suggestions.push({
+          fieldId: 'resourceManagerId',
+          fieldName: 'Resource Manager',
+          value: rm.id,
+          displayValue: rm.name,
+          confidence: 'low',
+        });
+      });
+      break;
+    }
+
+    case 'budgetTemplate': {
+      // Suggest template based on delivery org
+      const matchingTemplates = deliveryOrg
+        ? budgetTemplates.filter(t =>
+            t.category.toLowerCase().includes(deliveryOrg.toLowerCase()) ||
+            (deliveryOrg === 'Assurance' && t.category === 'Assurance') ||
+            (deliveryOrg === 'Tax' && t.category === 'Tax') ||
+            (deliveryOrg === 'GCS' && t.category === 'GCS (Advisory)') ||
+            (deliveryOrg === 'V360' && t.category === 'V360 (Valuation)')
+          )
+        : budgetTemplates.slice(0, 3);
+
+      (matchingTemplates.length > 0 ? matchingTemplates : budgetTemplates.slice(0, 3)).forEach(t => {
+        suggestions.push({
+          fieldId: 'budgetTemplateId',
+          fieldName: 'Budget Template',
+          value: t.id,
+          displayValue: `${t.name} (${t.category})`,
+          confidence: deliveryOrg ? 'high' : 'medium',
+        });
+      });
+      break;
+    }
+
+    case 'contractType': {
+      suggestions.push(
+        {
+          fieldId: 'contractType',
+          fieldName: 'Contract Type',
+          value: 'Time & Materials',
+          displayValue: 'Time & Materials',
+          confidence: 'medium',
+        },
+        {
+          fieldId: 'contractType',
+          fieldName: 'Contract Type',
+          value: 'Fixed Fee',
+          displayValue: 'Fixed Fee',
+          confidence: 'medium',
+        }
+      );
+      break;
+    }
+
+    case 'demandStartDate': {
+      // Suggest next Monday
+      const today = new Date();
+      const nextMonday = new Date(today);
+      nextMonday.setDate(today.getDate() + ((8 - today.getDay()) % 7 || 7));
+      const dateStr = nextMonday.toISOString().split('T')[0];
+
+      suggestions.push({
+        fieldId: 'demandStartDate',
+        fieldName: 'Start Date',
+        value: dateStr,
+        displayValue: `Next Monday (${nextMonday.toLocaleDateString()})`,
+        confidence: 'medium',
+      });
+      break;
+    }
+  }
+
+  return suggestions;
+}
+
 interface UseFieldGuideOptions {
   fields: GuideField[];
   enabled?: boolean;
@@ -87,7 +197,7 @@ export function useFieldGuide({ fields, enabled = true, onFieldChange }: UseFiel
   const driverRef = useRef<Driver | null>(null);
   const currentFieldIndexRef = useRef(0);
   const { currentProject } = useProjectStore();
-  const { addToast } = useAssistantStore();
+  const { addToast, setCurrentGuideField, setPendingAction } = useAssistantStore();
 
   // Check if a field is filled
   const isFieldFilled = useCallback((field: GuideField): boolean => {
@@ -127,6 +237,20 @@ export function useFieldGuide({ fields, enabled = true, onFieldChange }: UseFiel
       driverRef.current.destroy();
     }
 
+    // Update assistant store with current field
+    setCurrentGuideField(field.id);
+
+    // Generate and set suggestions for this field
+    const suggestions = generateFieldSuggestions(field.id, currentProject as unknown as Record<string, unknown>);
+    if (suggestions.length > 0) {
+      setPendingAction({
+        id: `guide-${field.id}`,
+        type: 'fill_fields',
+        suggestions,
+        description: `Suggestions for ${field.title}`,
+      });
+    }
+
     driverRef.current = driver({
       animate: true,
       overlayColor: 'rgba(0, 0, 0, 0.5)',
@@ -153,6 +277,10 @@ export function useFieldGuide({ fields, enabled = true, onFieldChange }: UseFiel
           if (nextIndex !== -1 && nextIndex !== currentFieldIndexRef.current) {
             currentFieldIndexRef.current = nextIndex;
             highlightField(nextIndex);
+          } else if (nextIndex === -1) {
+            // All done
+            setCurrentGuideField(null);
+            setPendingAction(null);
           }
         }, 300);
       },
@@ -160,7 +288,7 @@ export function useFieldGuide({ fields, enabled = true, onFieldChange }: UseFiel
 
     driverRef.current.drive();
     currentFieldIndexRef.current = index;
-  }, [fields, findNextUnfilledField]);
+  }, [fields, findNextUnfilledField, currentProject, setCurrentGuideField, setPendingAction]);
 
   // Advance to next field
   const advanceToNextField = useCallback(() => {
@@ -198,7 +326,9 @@ export function useFieldGuide({ fields, enabled = true, onFieldChange }: UseFiel
       driverRef.current.destroy();
       driverRef.current = null;
     }
-  }, []);
+    setCurrentGuideField(null);
+    setPendingAction(null);
+  }, [setCurrentGuideField, setPendingAction]);
 
   // Watch for field changes and advance
   useEffect(() => {

@@ -1,15 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Sparkles, Check, XIcon, Play, ChevronRight } from 'lucide-react';
+import { X, Send, Sparkles, XIcon, Play, ChevronRight } from 'lucide-react';
 import { useAssistantStore } from '../../store/assistantStore';
 import { useProjectStore } from '../../store/projectStore';
 import { useFieldGuide, step1Fields, step4Fields } from './FieldGuide';
-import type { FieldSuggestion } from '../../services/ai';
+import type { FieldSuggestion } from '../../services/ai/types';
 
-interface FloatingAssistantProps {
-  onApplySuggestions?: (suggestions: FieldSuggestion[]) => void;
-}
-
-export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps) {
+export function FloatingAssistant() {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -20,10 +16,11 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
     messages,
     pendingAction,
     isGuideActive,
+    currentGuideField,
     toggleOpen,
+    setOpen,
     sendMessage,
     initializeForStep,
-    acceptSuggestions,
     rejectSuggestions,
     setGuideActive,
     isAvailable,
@@ -56,6 +53,13 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
     }
   }, [currentStep, isGuideActive, guideFields.length, isComplete, startGuide]);
 
+  // Auto-open panel when guide is active and there's a pending action
+  useEffect(() => {
+    if (isGuideActive && pendingAction && !isOpen) {
+      setOpen(true);
+    }
+  }, [isGuideActive, pendingAction, isOpen, setOpen]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +87,11 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
     }
   };
 
+  // Get current field info for display
+  const currentFieldInfo = currentGuideField
+    ? guideFields.find(f => f.id === currentGuideField)
+    : null;
+
   // Apply a single suggestion and highlight the field
   const handleApplySuggestion = useCallback((suggestion: FieldSuggestion) => {
     // Apply the value to the project
@@ -90,21 +99,17 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
     updates[suggestion.fieldId] = suggestion.value;
     setCurrentProject(updates);
 
-    // Find and highlight the next field
-    const fieldIndex = guideFields.findIndex(f => f.id === suggestion.fieldId);
-    if (fieldIndex >= 0 && fieldIndex < guideFields.length - 1) {
-      setTimeout(() => highlightField(fieldIndex + 1), 300);
-    }
-  }, [setCurrentProject, guideFields, highlightField]);
+    // Find current field index by looking at fieldKey matching
+    const currentFieldIndex = guideFields.findIndex(f => f.fieldKey === suggestion.fieldId);
 
-  const handleAccept = () => {
-    if (onApplySuggestions && pendingAction) {
-      // Apply all suggestions
-      acceptSuggestions(onApplySuggestions);
-      // Restart guide to move to next unfilled field
-      setTimeout(startGuide, 500);
+    // Advance to next field after a short delay
+    if (currentFieldIndex >= 0 && currentFieldIndex < guideFields.length - 1) {
+      setTimeout(() => highlightField(currentFieldIndex + 1), 300);
+    } else {
+      // We're at the end, just trigger advancement
+      setTimeout(startGuide, 300);
     }
-  };
+  }, [setCurrentProject, guideFields, highlightField, startGuide]);
 
   const handleStartGuide = () => {
     setGuideActive(true);
@@ -166,13 +171,22 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
               </div>
             )}
 
-            {/* Pending action card */}
+            {/* Pending action card - synced with spotlight */}
             {pendingAction && (
               <div className="suggestion-card">
                 <div className="suggestion-header">
                   <Sparkles size={14} />
-                  <span>Suggested changes</span>
+                  <span>
+                    {currentFieldInfo
+                      ? `Select ${currentFieldInfo.title}`
+                      : 'Suggestions'}
+                  </span>
                 </div>
+                {currentFieldInfo && (
+                  <div className="suggestion-context">
+                    {currentFieldInfo.description}
+                  </div>
+                )}
                 <div className="suggestion-list">
                   {pendingAction.suggestions.map((s, idx) => (
                     <button
@@ -181,7 +195,6 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
                       onClick={() => handleApplySuggestion(s)}
                       title="Click to apply this suggestion"
                     >
-                      <span className="field-name">{s.fieldName}</span>
                       <span className="field-value">
                         {s.displayValue}
                         <ChevronRight size={14} />
@@ -190,13 +203,9 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
                   ))}
                 </div>
                 <div className="suggestion-actions">
-                  <button className="btn btn-primary btn-small" onClick={handleAccept}>
-                    <Check size={14} />
-                    Apply All
-                  </button>
                   <button className="btn btn-ghost btn-small" onClick={rejectSuggestions}>
                     <XIcon size={14} />
-                    Dismiss
+                    Skip
                   </button>
                 </div>
               </div>
@@ -245,12 +254,12 @@ export function FloatingAssistant({ onApplySuggestions }: FloatingAssistantProps
 
       {/* Floating Bubble */}
       <button
-        className={`assistant-bubble ${isOpen ? 'open' : ''}`}
+        className={`assistant-bubble ${isOpen ? 'open' : ''} ${pendingAction ? 'has-suggestion' : ''}`}
         onClick={toggleOpen}
         aria-label="Toggle AI Assistant"
       >
-        {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
-        {!isOpen && messages.length > 0 && <span className="bubble-badge" />}
+        {isOpen ? <X size={24} /> : <Sparkles size={24} />}
+        {!isOpen && pendingAction && <span className="bubble-badge pulse" />}
       </button>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
@@ -9,7 +9,6 @@ import { Step3GrossMargin } from '../components/wizard/Step3GrossMargin';
 import { Step4Demand } from '../components/wizard/Step4Demand';
 import { Step5Review } from '../components/wizard/Step5Review';
 import { FloatingAssistant, SuggestionToasts } from '../components/assistant';
-import type { FieldSuggestion } from '../services/ai';
 
 export function ProjectWizard() {
   const { projectId } = useParams();
@@ -22,7 +21,6 @@ export function ProjectWizard() {
     saveProject,
     loadProject,
     validateStep,
-    setCurrentProject,
   } = useProjectStore();
 
   useEffect(() => {
@@ -35,42 +33,6 @@ export function ProjectWizard() {
     saveProject();
     alert('Project saved!');
   };
-
-  // Handle AI suggestions
-  const handleApplySuggestions = useCallback((suggestions: FieldSuggestion[]) => {
-    const updates: Record<string, unknown> = {};
-
-    suggestions.forEach((suggestion) => {
-      // Map field IDs to project properties
-      switch (suggestion.fieldId) {
-        case 'industryId':
-          updates.industryId = suggestion.value;
-          break;
-        case 'resourceManagerId':
-          updates.resourceManagerId = suggestion.value;
-          break;
-        case 'budgetTemplateId':
-          updates.budgetTemplateId = suggestion.value;
-          break;
-        case 'contractType':
-          updates.contractType = suggestion.value;
-          break;
-        case 'totalProjectFee':
-          updates.totalProjectFee = suggestion.value;
-          break;
-        case 'demandStartDate':
-          updates.demandStartDate = suggestion.value;
-          break;
-        default:
-          // Handle other fields as needed
-          break;
-      }
-    });
-
-    if (Object.keys(updates).length > 0) {
-      setCurrentProject(updates);
-    }
-  }, [setCurrentProject]);
 
   const handleNext = () => {
     const validation = validateStep(currentStep);
@@ -147,7 +109,7 @@ export function ProjectWizard() {
       </div>
 
       {/* AI Assistant */}
-      <FloatingAssistant onApplySuggestions={handleApplySuggestions} />
+      <FloatingAssistant />
       <SuggestionToasts />
     </div>
   );

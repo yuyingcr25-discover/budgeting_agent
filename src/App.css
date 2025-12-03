@@ -1941,6 +1941,34 @@ body {
   border: 2px solid white;
 }
 
+.bubble-badge.pulse {
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.assistant-bubble.has-suggestion {
+  animation: bubbleGlow 2s ease-in-out infinite;
+}
+
+@keyframes bubbleGlow {
+  0%, 100% {
+    box-shadow: var(--shadow-lg), 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+  50% {
+    box-shadow: var(--shadow-lg), 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+}
+
 /* Assistant Panel */
 .assistant-panel {
   width: 380px;
@@ -2081,10 +2109,17 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-primary);
+  margin-bottom: var(--space-2);
+}
+
+.suggestion-context {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   margin-bottom: var(--space-3);
+  line-height: var(--leading-relaxed);
 }
 
 .suggestion-list {
