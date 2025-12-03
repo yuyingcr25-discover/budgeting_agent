@@ -475,6 +475,7 @@ body {
   background: var(--color-bg-white);
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
+  margin-bottom: var(--space-8);
 }
 
 .empty-state svg {
@@ -786,7 +787,7 @@ body {
 
 /* Step Content */
 .step-content {
-  padding: var(--space-8);
+  padding: var(--space-6);
 }
 
 .step-header {
@@ -1090,7 +1091,7 @@ body {
    ============================================ */
 
 .step-budget {
-  padding: var(--space-6);
+  /* Uses .step-content padding */
 }
 
 .budget-summary-bar {
@@ -1317,7 +1318,7 @@ body {
    ============================================ */
 
 .step-gross-margin {
-  padding: var(--space-6);
+  /* Uses .step-content padding */
 }
 
 .gm-summary-card {
@@ -1446,6 +1447,10 @@ body {
   gap: var(--space-6);
 }
 
+.gm-details-grid > .form-section:last-child {
+  grid-column: 1 / -1;
+}
+
 /* ============================================
    Data Tables
    ============================================ */
@@ -1568,7 +1573,7 @@ body {
    ============================================ */
 
 .step-demand {
-  padding: var(--space-6);
+  /* Uses .step-content padding */
 }
 
 .demand-summary-bar {
@@ -1712,7 +1717,7 @@ body {
    ============================================ */
 
 .step-review {
-  padding: var(--space-6);
+  /* Uses .step-content padding */
 }
 
 .validation-summary {
