@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { X, Send, Sparkles, XIcon, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
+import { X, Send, Sparkles, XIcon, ChevronRight, CheckCircle2, Circle, Check } from 'lucide-react';
 import { useAssistantStore } from '../../store/assistantStore';
 import { useProjectStore } from '../../store/projectStore';
 import { getStepCompletion } from '../../services/ai';
+import { resourceManagers } from '../../data/referenceData';
 import type { FieldSuggestion } from '../../services/ai/types';
 
 export function FloatingAssistant() {
@@ -15,11 +16,14 @@ export function FloatingAssistant() {
     isLoading,
     messages,
     pendingAction,
+    quickSuggestion,
     toggleOpen,
     sendMessage,
     initializeForStep,
     checkProjectChanges,
     rejectSuggestions,
+    acceptQuickSuggestion,
+    dismissQuickSuggestion,
     isAvailable,
   } = useAssistantStore();
 
@@ -79,6 +83,22 @@ export function FloatingAssistant() {
     updates[suggestion.fieldId] = suggestion.value;
     setCurrentProject(updates);
   }, [setCurrentProject]);
+
+  // Accept the quick suggestion from the assistant
+  const handleAcceptQuickSuggestion = useCallback(() => {
+    acceptQuickSuggestion((fieldId, value) => {
+      const updates: Record<string, unknown> = {};
+      // Special handling for fields that need additional data
+      if (fieldId === 'resourceManagerId') {
+        const rm = resourceManagers.find(r => r.id === value);
+        updates.resourceManagerId = value;
+        updates.resourceManagerName = rm?.name || '';
+      } else {
+        updates[fieldId] = value;
+      }
+      setCurrentProject(updates);
+    });
+  }, [acceptQuickSuggestion, setCurrentProject]);
 
   // Don't render if AI is not available
   if (!isAvailable()) {
@@ -153,7 +173,35 @@ export function FloatingAssistant() {
               </div>
             )}
 
-            {/* Pending action card */}
+            {/* Quick suggestion action card */}
+            {quickSuggestion && (
+              <div className="quick-suggestion-card">
+                <div className="quick-suggestion-content">
+                  <div className="quick-suggestion-field">
+                    <span className="field-label">{quickSuggestion.fieldName}</span>
+                    <span className="field-value">{quickSuggestion.displayValue}</span>
+                  </div>
+                </div>
+                <div className="quick-suggestion-actions">
+                  <button
+                    className="btn btn-primary btn-small"
+                    onClick={handleAcceptQuickSuggestion}
+                  >
+                    <Check size={14} />
+                    Accept
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-small"
+                    onClick={dismissQuickSuggestion}
+                  >
+                    <XIcon size={14} />
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Pending action card (from AI chat) */}
             {pendingAction && (
               <div className="suggestion-card">
                 <div className="suggestion-header">
@@ -211,12 +259,12 @@ export function FloatingAssistant() {
 
       {/* Floating Bubble */}
       <button
-        className={`assistant-bubble ${isOpen ? 'open' : ''} ${pendingAction ? 'has-suggestion' : ''}`}
+        className={`assistant-bubble ${isOpen ? 'open' : ''} ${pendingAction || quickSuggestion ? 'has-suggestion' : ''}`}
         onClick={toggleOpen}
         aria-label="Toggle AI Assistant"
       >
         {isOpen ? <X size={24} /> : <Sparkles size={24} />}
-        {!isOpen && pendingAction && <span className="bubble-badge pulse" />}
+        {!isOpen && (pendingAction || quickSuggestion) && <span className="bubble-badge pulse" />}
       </button>
     </div>
   );

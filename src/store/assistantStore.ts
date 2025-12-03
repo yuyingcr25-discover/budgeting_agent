@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import type { AIMessage, FieldSuggestion, WizardContext } from '../services/ai';
-import { getAIService, isAIAvailable, getWelcomeMessage, getStepCompletion, getNextActionPrompt } from '../services/ai';
+import type { AIMessage, FieldSuggestion, WizardContext, TrackerFieldSuggestion } from '../services/ai';
+import { getAIService, isAIAvailable, getWelcomeMessage, getStepCompletion, getNextActionPrompt, getFieldSuggestion, getStepSuggestions } from '../services/ai';
 import { industries, budgetTemplates, resourceManagers, roles } from '../data/referenceData';
 import type { Project } from '../types';
 
@@ -28,6 +28,7 @@ interface AssistantStore {
   isLoading: boolean;
   messages: AIMessage[];
   pendingAction: PendingAction | null;
+  quickSuggestion: TrackerFieldSuggestion | null;
   toasts: Toast[];
   inlineSuggestions: Record<string, FieldSuggestion>;
   lastStep: number;
@@ -44,6 +45,7 @@ interface AssistantStore {
 
   // Proactive guidance actions
   checkProjectChanges: (project: Project, step: number) => void;
+  offerNextFieldSuggestion: (project: Project, step: number) => void;
 
   // Suggestion actions
   setPendingAction: (action: PendingAction | null) => void;
@@ -51,6 +53,8 @@ interface AssistantStore {
   rejectSuggestions: () => void;
   setInlineSuggestion: (fieldId: string, suggestion: FieldSuggestion | null) => void;
   clearInlineSuggestions: () => void;
+  acceptQuickSuggestion: (onApply: (fieldId: string, value: string) => void) => void;
+  dismissQuickSuggestion: () => void;
 
   // Toast actions
   addToast: (toast: Omit<Toast, 'id'>) => void;
@@ -82,6 +86,7 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   isLoading: false,
   messages: [],
   pendingAction: null,
+  quickSuggestion: null,
   toasts: [],
   inlineSuggestions: {},
   lastStep: 0,
@@ -150,18 +155,27 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   initializeForStep: (step, projectData) => {
     const { lastStep, messages, hasVisitedStep } = get();
     const isFirstVisit = !hasVisitedStep[step];
+    const project = projectData as unknown as Project;
 
     // Only add welcome message if step changed
     if (step !== lastStep) {
       // Get completion status and build context-aware welcome
-      const completion = getStepCompletion(step, projectData as unknown as Project);
-      const nextActionHint = getNextActionPrompt(completion);
+      const completion = getStepCompletion(step, project);
 
       let welcomeMessage = getWelcomeMessage(step, projectData);
 
-      // Add completion status and next action hint
-      if (!completion.isComplete && nextActionHint) {
-        welcomeMessage += `\n\n${nextActionHint}`;
+      // Get suggestions for incomplete fields
+      const suggestions = getStepSuggestions(step, project);
+      const firstSuggestion = suggestions[0] || null;
+
+      // If we have a suggestion for the next field, mention it
+      if (firstSuggestion && !completion.isComplete) {
+        welcomeMessage += `\n\nI'd suggest setting **${firstSuggestion.fieldName}** to "${firstSuggestion.displayValue}" (${firstSuggestion.reason}). Click "Accept" below to apply this, or fill it in yourself.`;
+      } else if (!completion.isComplete) {
+        const nextActionHint = getNextActionPrompt(completion);
+        if (nextActionHint) {
+          welcomeMessage += `\n\n${nextActionHint}`;
+        }
       }
 
       // Keep conversation history but add new step context
@@ -172,20 +186,21 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
         lastStep: step,
         inlineSuggestions: {},
         hasVisitedStep: { ...hasVisitedStep, [step]: true },
-        lastProjectSnapshot: { ...(projectData as unknown as Partial<Project>) },
+        lastProjectSnapshot: { ...project },
+        quickSuggestion: firstSuggestion,
         // Auto-open on first visit to help guide the user
         isOpen: isFirstVisit ? true : get().isOpen,
       });
 
-      // Try to get proactive suggestions for this step
+      // Try to get proactive suggestions for this step from AI
       const service = getAIService();
       if (service) {
         const context = buildWizardContext(step, projectData);
-        service.getSuggestions(context).then((suggestions) => {
-          if (suggestions.length > 0) {
+        service.getSuggestions(context).then((aiSuggestions) => {
+          if (aiSuggestions.length > 0) {
             // Set inline suggestions
             const inlineSuggestions: Record<string, FieldSuggestion> = {};
-            suggestions.forEach((s) => {
+            aiSuggestions.forEach((s) => {
               inlineSuggestions[s.fieldId] = s;
             });
             set({ inlineSuggestions });
@@ -214,8 +229,8 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
     });
 
     if (newlyCompleted.length > 0) {
-      // Update snapshot
-      set({ lastProjectSnapshot: { ...project }, lastCompletedField: newlyCompleted[0].fieldId });
+      // Update snapshot and clear old suggestion
+      set({ lastProjectSnapshot: { ...project }, lastCompletedField: newlyCompleted[0].fieldId, quickSuggestion: null });
 
       // Celebrate completion and prompt for next action
       const fieldNames = newlyCompleted.map(f => f.fieldName).join(', ');
@@ -234,17 +249,43 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
           duration: 3000,
         });
       } else {
-        // Still have more fields to fill
-        const nextHint = getNextActionPrompt(currentCompletion);
-        const progressMessage: AIMessage = {
-          role: 'assistant',
-          content: `${fieldNames} completed! ${nextHint || 'Keep going!'}`,
-        };
-        set({ messages: [...messages, progressMessage] });
+        // Still have more fields to fill - offer the next suggestion
+        get().offerNextFieldSuggestion(project, step);
       }
     } else {
       // Just update snapshot for comparison
       set({ lastProjectSnapshot: { ...project } });
+    }
+  },
+
+  offerNextFieldSuggestion: (project, step) => {
+    const { messages } = get();
+    const completion = getStepCompletion(step, project);
+
+    // Find the next incomplete required field
+    const nextField = completion.nextIncompleteField;
+    if (!nextField) return;
+
+    // Get a suggestion for that field
+    const suggestion = getFieldSuggestion(nextField.fieldId, project);
+
+    if (suggestion) {
+      const progressMessage: AIMessage = {
+        role: 'assistant',
+        content: `Great progress! Next, let's set **${suggestion.fieldName}**. I'd suggest "${suggestion.displayValue}" (${suggestion.reason}). Click "Accept" to apply, or choose your own value.`,
+      };
+      set({
+        messages: [...messages, progressMessage],
+        quickSuggestion: suggestion,
+      });
+    } else {
+      // No suggestion available, just prompt
+      const nextHint = getNextActionPrompt(completion);
+      const progressMessage: AIMessage = {
+        role: 'assistant',
+        content: nextHint || 'Keep going! Fill in the next field.',
+      };
+      set({ messages: [...messages, progressMessage] });
     }
   },
 
@@ -285,6 +326,41 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   },
 
   clearInlineSuggestions: () => set({ inlineSuggestions: {} }),
+
+  acceptQuickSuggestion: (onApply) => {
+    const { quickSuggestion, messages } = get();
+    if (quickSuggestion) {
+      onApply(quickSuggestion.fieldId, quickSuggestion.value);
+
+      // Add confirmation message
+      const confirmMessage: AIMessage = {
+        role: 'assistant',
+        content: `Done! I've set ${quickSuggestion.fieldName} to "${quickSuggestion.displayValue}".`,
+      };
+      set({
+        messages: [...messages, confirmMessage],
+        quickSuggestion: null,
+      });
+
+      get().addToast({
+        message: `${quickSuggestion.fieldName} updated`,
+        type: 'success',
+        duration: 2000,
+      });
+    }
+  },
+
+  dismissQuickSuggestion: () => {
+    const { messages } = get();
+    const dismissMessage: AIMessage = {
+      role: 'assistant',
+      content: "No problem! Go ahead and fill in the value yourself.",
+    };
+    set({
+      messages: [...messages, dismissMessage],
+      quickSuggestion: null,
+    });
+  },
 
   addToast: (toast) => {
     const id = generateId();
