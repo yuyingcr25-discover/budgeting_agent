@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Home, Settings, Moon, Sun } from 'lucide-react';
+import { Home, Settings, Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '../../store/themeStore';
+import crLogoOrange from '../../assets/cr-logo-orange.png';
+import crLogoWhite from '../../assets/cr-logo-white.png';
 
 export function Header() {
   const location = useLocation();
@@ -10,7 +12,11 @@ export function Header() {
     <header className="header">
       <div className="header-content">
         <Link to="/" className="logo">
-          <FileText size={24} />
+          <img
+            src={theme === 'light' ? crLogoOrange : crLogoWhite}
+            alt="CohnReznick"
+            className="logo-image"
+          />
           <span>Project Setup Workbook</span>
         </Link>
 
