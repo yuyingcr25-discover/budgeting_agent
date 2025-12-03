@@ -175,10 +175,13 @@ export function FloatingAssistant() {
 
             {/* Quick suggestion action card */}
             {quickSuggestion && (
-              <div className="quick-suggestion-card">
+              <div className={`quick-suggestion-card ${quickSuggestion.isOptional ? 'optional' : ''}`}>
                 <div className="quick-suggestion-content">
                   <div className="quick-suggestion-field">
-                    <span className="field-label">{quickSuggestion.fieldName}</span>
+                    <span className="field-label">
+                      {quickSuggestion.fieldName}
+                      {quickSuggestion.isOptional && <span className="optional-badge">Optional</span>}
+                    </span>
                     <span className="field-value">{quickSuggestion.displayValue}</span>
                   </div>
                 </div>
@@ -192,7 +195,7 @@ export function FloatingAssistant() {
                   </button>
                   <button
                     className="btn btn-ghost btn-small"
-                    onClick={dismissQuickSuggestion}
+                    onClick={() => dismissQuickSuggestion(currentProject, currentStep)}
                   >
                     <XIcon size={14} />
                     Skip

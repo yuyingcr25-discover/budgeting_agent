@@ -2646,11 +2646,34 @@ input[type="number"] {
 }
 
 .quick-suggestion-field .field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.optional-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.quick-suggestion-card.optional {
+  border-color: var(--color-warning);
+  background: linear-gradient(135deg, var(--color-warning-bg), var(--color-bg-subtle));
+}
+
+.quick-suggestion-card.optional .field-label {
+  color: var(--color-warning);
 }
 
 .quick-suggestion-field .field-value {

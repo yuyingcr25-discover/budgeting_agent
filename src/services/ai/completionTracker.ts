@@ -7,6 +7,7 @@ export interface FieldSuggestion {
   value: string;
   displayValue: string;
   reason: string;
+  isOptional?: boolean;
 }
 
 export interface FieldStatus {
@@ -22,8 +23,11 @@ export interface StepCompletionStatus {
   fields: FieldStatus[];
   completedCount: number;
   requiredCount: number;
+  totalCount: number;
   isComplete: boolean;
+  isRequiredComplete: boolean;
   nextIncompleteField: FieldStatus | null;
+  nextIncompleteRequiredField: FieldStatus | null;
   progressPercent: number;
 }
 
@@ -130,15 +134,21 @@ export function getStepCompletion(step: number, project: Project): StepCompletio
 
   const requiredFields = fields.filter(f => f.isRequired);
   const completedRequired = requiredFields.filter(f => f.isComplete);
-  const nextIncomplete = fields.find(f => f.isRequired && !f.isComplete) || null;
+  const completedAll = fields.filter(f => f.isComplete);
+  const nextIncompleteRequired = fields.find(f => f.isRequired && !f.isComplete) || null;
+  // Find next incomplete field (any field, prioritizing required first)
+  const nextIncomplete = nextIncompleteRequired || fields.find(f => !f.isComplete) || null;
 
   return {
     step,
     fields,
-    completedCount: completedRequired.length,
+    completedCount: completedAll.length,
     requiredCount: requiredFields.length,
-    isComplete: completedRequired.length === requiredFields.length,
+    totalCount: fields.length,
+    isComplete: completedAll.length === fields.length,
+    isRequiredComplete: completedRequired.length === requiredFields.length,
     nextIncompleteField: nextIncomplete,
+    nextIncompleteRequiredField: nextIncompleteRequired,
     progressPercent: requiredFields.length > 0
       ? Math.round((completedRequired.length / requiredFields.length) * 100)
       : 100,
@@ -146,16 +156,30 @@ export function getStepCompletion(step: number, project: Project): StepCompletio
 }
 
 export function getNextActionPrompt(completion: StepCompletionStatus): string | null {
+  // All fields (including optional) are complete
   if (completion.isComplete) {
     if (completion.step < 5) {
-      return `Great job! You've completed all required fields for this step. Click "Next" to continue to step ${completion.step + 1}.`;
+      return `Great job! You've completed all fields for this step. Click "Next" to continue to step ${completion.step + 1}.`;
     }
     return "Your project is ready for review. Check the summary and submit when ready.";
   }
 
+  // Required fields are done, but optional fields remain
+  if (completion.isRequiredComplete) {
+    const next = completion.nextIncompleteField;
+    if (next) {
+      return `Required fields are complete! Would you like to also set "${next.fieldName}"? (Optional) Or click "Next" to continue.`;
+    }
+    if (completion.step < 5) {
+      return `Required fields are complete! Click "Next" to continue, or fill in optional fields.`;
+    }
+  }
+
+  // Still have required fields to complete
   const next = completion.nextIncompleteField;
   if (next) {
-    return next.hint || `Please complete the "${next.fieldName}" field.`;
+    const prefix = next.isRequired ? '' : '(Optional) ';
+    return prefix + (next.hint || `Please complete the "${next.fieldName}" field.`);
   }
 
   return null;
@@ -181,7 +205,7 @@ export function hasFieldChanged(
 /**
  * Generate a smart suggestion for a field based on the current project context
  */
-export function getFieldSuggestion(fieldId: string, project: Project): FieldSuggestion | null {
+export function getFieldSuggestion(fieldId: string, project: Project, isOptional: boolean = false): FieldSuggestion | null {
   switch (fieldId) {
     case 'industryId': {
       // Suggest based on client name patterns or default to a common industry
@@ -206,6 +230,7 @@ export function getFieldSuggestion(fieldId: string, project: Project): FieldSugg
         reason: clientName
           ? `Based on the client name "${project.clientName}"`
           : 'A common industry selection',
+        isOptional,
       };
     }
 
@@ -218,6 +243,7 @@ export function getFieldSuggestion(fieldId: string, project: Project): FieldSugg
         value: rm.id,
         displayValue: rm.name,
         reason: 'Available resource manager for your region',
+        isOptional: true, // Resource manager is optional
       };
     }
 
@@ -244,6 +270,7 @@ export function getFieldSuggestion(fieldId: string, project: Project): FieldSugg
         reason: project.deliveryServiceOrg
           ? `Matches your delivery organization "${project.deliveryServiceOrg}"`
           : 'A standard template for most projects',
+        isOptional,
       };
     }
 
@@ -261,6 +288,7 @@ export function getFieldSuggestion(fieldId: string, project: Project): FieldSugg
         value: dateStr,
         displayValue: nextMonday.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }),
         reason: 'The upcoming Monday - a typical project start date',
+        isOptional,
       };
     }
 
@@ -270,15 +298,26 @@ export function getFieldSuggestion(fieldId: string, project: Project): FieldSugg
 }
 
 /**
- * Get all available suggestions for the current step
+ * Get all available suggestions for the current step (required fields first, then optional)
  */
 export function getStepSuggestions(step: number, project: Project): FieldSuggestion[] {
   const completion = getStepCompletion(step, project);
   const suggestions: FieldSuggestion[] = [];
 
+  // First add required fields
   for (const field of completion.fields) {
     if (!field.isComplete && field.isRequired) {
-      const suggestion = getFieldSuggestion(field.fieldId, project);
+      const suggestion = getFieldSuggestion(field.fieldId, project, false);
+      if (suggestion) {
+        suggestions.push(suggestion);
+      }
+    }
+  }
+
+  // Then add optional fields
+  for (const field of completion.fields) {
+    if (!field.isComplete && !field.isRequired) {
+      const suggestion = getFieldSuggestion(field.fieldId, project, true);
       if (suggestion) {
         suggestions.push(suggestion);
       }

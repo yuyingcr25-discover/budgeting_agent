@@ -54,7 +54,7 @@ interface AssistantStore {
   setInlineSuggestion: (fieldId: string, suggestion: FieldSuggestion | null) => void;
   clearInlineSuggestions: () => void;
   acceptQuickSuggestion: (onApply: (fieldId: string, value: string) => void) => void;
-  dismissQuickSuggestion: () => void;
+  dismissQuickSuggestion: (project: Project, step: number) => void;
 
   // Toast actions
   addToast: (toast: Omit<Toast, 'id'>) => void;
@@ -236,10 +236,10 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
       const fieldNames = newlyCompleted.map(f => f.fieldName).join(', ');
 
       if (currentCompletion.isComplete) {
-        // Step is fully complete
+        // All fields (including optional) are complete
         const successMessage: AIMessage = {
           role: 'assistant',
-          content: `${fieldNames} completed! All required fields for this step are done. You can click "Next" to continue.`,
+          content: `${fieldNames} completed! All fields for this step are done. You can click "Next" to continue.`,
         };
         set({ messages: [...messages, successMessage] });
 
@@ -248,6 +248,22 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
           type: 'success',
           duration: 3000,
         });
+      } else if (currentCompletion.isRequiredComplete && !previousCompletion.isRequiredComplete) {
+        // Just finished required fields, now offering optional
+        const successMessage: AIMessage = {
+          role: 'assistant',
+          content: `${fieldNames} completed! All required fields are done. You can click "Next" to continue, or I can help with optional fields.`,
+        };
+        set({ messages: [...messages, successMessage] });
+
+        get().addToast({
+          message: `Required fields complete!`,
+          type: 'success',
+          duration: 3000,
+        });
+
+        // Offer optional field suggestions
+        get().offerNextFieldSuggestion(project, step);
       } else {
         // Still have more fields to fill - offer the next suggestion
         get().offerNextFieldSuggestion(project, step);
@@ -262,17 +278,20 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
     const { messages } = get();
     const completion = getStepCompletion(step, project);
 
-    // Find the next incomplete required field
+    // Find the next incomplete field (required fields first, then optional)
     const nextField = completion.nextIncompleteField;
     if (!nextField) return;
 
     // Get a suggestion for that field
-    const suggestion = getFieldSuggestion(nextField.fieldId, project);
+    const isOptional = !nextField.isRequired;
+    const suggestion = getFieldSuggestion(nextField.fieldId, project, isOptional);
 
     if (suggestion) {
+      const optionalLabel = isOptional ? ' (Optional)' : '';
+      const skipNote = isOptional ? ' Click "Skip" if you don\'t need this.' : '';
       const progressMessage: AIMessage = {
         role: 'assistant',
-        content: `Great progress! Next, let's set **${suggestion.fieldName}**. I'd suggest "${suggestion.displayValue}" (${suggestion.reason}). Click "Accept" to apply, or choose your own value.`,
+        content: `Great progress! Next, let's set **${suggestion.fieldName}**${optionalLabel}. I'd suggest "${suggestion.displayValue}" (${suggestion.reason}). Click "Accept" to apply, or choose your own value.${skipNote}`,
       };
       set({
         messages: [...messages, progressMessage],
@@ -350,16 +369,52 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
     }
   },
 
-  dismissQuickSuggestion: () => {
-    const { messages } = get();
-    const dismissMessage: AIMessage = {
-      role: 'assistant',
-      content: "No problem! Go ahead and fill in the value yourself.",
-    };
-    set({
-      messages: [...messages, dismissMessage],
-      quickSuggestion: null,
-    });
+  dismissQuickSuggestion: (project, step) => {
+    const { messages, quickSuggestion } = get();
+    const completion = getStepCompletion(step, project);
+
+    // Find the next suggestion after the skipped one
+    const skippedFieldId = quickSuggestion?.fieldId;
+    const nextField = completion.fields.find(f => !f.isComplete && f.fieldId !== skippedFieldId);
+
+    if (nextField) {
+      const isOptional = !nextField.isRequired;
+      const nextSuggestion = getFieldSuggestion(nextField.fieldId, project, isOptional);
+
+      if (nextSuggestion) {
+        const optionalLabel = isOptional ? ' (Optional)' : '';
+        const dismissMessage: AIMessage = {
+          role: 'assistant',
+          content: `No problem! Let's move on to **${nextSuggestion.fieldName}**${optionalLabel}. I'd suggest "${nextSuggestion.displayValue}".`,
+        };
+        set({
+          messages: [...messages, dismissMessage],
+          quickSuggestion: nextSuggestion,
+        });
+        return;
+      }
+    }
+
+    // No more fields or suggestions, check if required are done
+    if (completion.isRequiredComplete) {
+      const doneMessage: AIMessage = {
+        role: 'assistant',
+        content: "All set! Required fields are complete. You can click \"Next\" to continue.",
+      };
+      set({
+        messages: [...messages, doneMessage],
+        quickSuggestion: null,
+      });
+    } else {
+      const dismissMessage: AIMessage = {
+        role: 'assistant',
+        content: "No problem! Go ahead and fill in the value yourself.",
+      };
+      set({
+        messages: [...messages, dismissMessage],
+        quickSuggestion: null,
+      });
+    }
   },
 
   addToast: (toast) => {
