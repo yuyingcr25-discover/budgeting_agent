@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Sparkles, XIcon, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { X, Send, Sparkles, XIcon, ChevronRight, CheckCircle2, Circle, Check } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useAssistantStore } from '../../store/assistantStore';
 import { useProjectStore } from '../../store/projectStore';
+import { getStepCompletion } from '../../services/ai';
+import { resourceManagers } from '../../data/referenceData';
 import type { FieldSuggestion } from '../../services/ai/types';
 
 export function FloatingAssistant() {
@@ -14,21 +17,39 @@ export function FloatingAssistant() {
     isLoading,
     messages,
     pendingAction,
+    quickSuggestion,
     toggleOpen,
     sendMessage,
     initializeForStep,
+    checkProjectChanges,
     rejectSuggestions,
+    acceptQuickSuggestion,
+    dismissQuickSuggestion,
     isAvailable,
   } = useAssistantStore();
 
   const { currentProject, currentStep, setCurrentProject } = useProjectStore();
+
+  // Calculate step completion for progress display
+  const stepCompletion = useMemo(() => {
+    return getStepCompletion(currentStep, currentProject);
+  }, [currentStep, currentProject]);
 
   // Initialize assistant when step changes
   useEffect(() => {
     if (isAvailable()) {
       initializeForStep(currentStep, currentProject as unknown as Record<string, unknown>);
     }
-  }, [currentStep, initializeForStep, isAvailable, currentProject]);
+  // Only run when step changes, not on every project change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, initializeForStep, isAvailable]);
+
+  // Watch for project changes to provide proactive guidance
+  useEffect(() => {
+    if (isAvailable()) {
+      checkProjectChanges(currentProject, currentStep);
+    }
+  }, [currentProject, currentStep, checkProjectChanges, isAvailable]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -64,6 +85,22 @@ export function FloatingAssistant() {
     setCurrentProject(updates);
   }, [setCurrentProject]);
 
+  // Accept the quick suggestion from the assistant
+  const handleAcceptQuickSuggestion = useCallback(() => {
+    acceptQuickSuggestion((fieldId, value) => {
+      const updates: Record<string, unknown> = {};
+      // Special handling for fields that need additional data
+      if (fieldId === 'resourceManagerId') {
+        const rm = resourceManagers.find(r => r.id === value);
+        updates.resourceManagerId = value;
+        updates.resourceManagerName = rm?.name || '';
+      } else {
+        updates[fieldId] = value;
+      }
+      setCurrentProject(updates);
+    });
+  }, [acceptQuickSuggestion, setCurrentProject]);
+
   // Don't render if AI is not available
   if (!isAvailable()) {
     return null;
@@ -84,6 +121,29 @@ export function FloatingAssistant() {
             </button>
           </div>
 
+          {/* Progress indicator */}
+          <div className="assistant-progress">
+            <div className="progress-label">
+              Step {currentStep} Progress: {stepCompletion.completedCount}/{stepCompletion.requiredCount} required fields
+            </div>
+            <div className="progress-fields">
+              {stepCompletion.fields.filter(f => f.isRequired).map((field) => (
+                <div
+                  key={field.fieldId}
+                  className={`progress-field ${field.isComplete ? 'complete' : 'pending'}`}
+                  title={field.fieldName}
+                >
+                  {field.isComplete ? (
+                    <CheckCircle2 size={14} />
+                  ) : (
+                    <Circle size={14} />
+                  )}
+                  <span>{field.fieldName}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="assistant-messages">
             {messages.map((msg, idx) => (
               <div
@@ -95,7 +155,13 @@ export function FloatingAssistant() {
                     <Sparkles size={14} />
                   </div>
                 )}
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content">
+                  {msg.role === 'assistant' ? (
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
             ))}
 
@@ -114,7 +180,38 @@ export function FloatingAssistant() {
               </div>
             )}
 
-            {/* Pending action card */}
+            {/* Quick suggestion action card */}
+            {quickSuggestion && (
+              <div className={`quick-suggestion-card ${quickSuggestion.isOptional ? 'optional' : ''}`}>
+                <div className="quick-suggestion-content">
+                  <div className="quick-suggestion-field">
+                    <span className="field-label">
+                      {quickSuggestion.fieldName}
+                      {quickSuggestion.isOptional && <span className="optional-badge">Optional</span>}
+                    </span>
+                    <span className="field-value">{quickSuggestion.displayValue}</span>
+                  </div>
+                </div>
+                <div className="quick-suggestion-actions">
+                  <button
+                    className="btn btn-primary btn-small"
+                    onClick={handleAcceptQuickSuggestion}
+                  >
+                    <Check size={14} />
+                    Accept
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-small"
+                    onClick={() => dismissQuickSuggestion(currentProject, currentStep)}
+                  >
+                    <XIcon size={14} />
+                    Skip
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Pending action card (from AI chat) */}
             {pendingAction && (
               <div className="suggestion-card">
                 <div className="suggestion-header">
@@ -172,12 +269,12 @@ export function FloatingAssistant() {
 
       {/* Floating Bubble */}
       <button
-        className={`assistant-bubble ${isOpen ? 'open' : ''} ${pendingAction ? 'has-suggestion' : ''}`}
+        className={`assistant-bubble ${isOpen ? 'open' : ''} ${pendingAction || quickSuggestion ? 'has-suggestion' : ''}`}
         onClick={toggleOpen}
         aria-label="Toggle AI Assistant"
       >
         {isOpen ? <X size={24} /> : <Sparkles size={24} />}
-        {!isOpen && pendingAction && <span className="bubble-badge pulse" />}
+        {!isOpen && (pendingAction || quickSuggestion) && <span className="bubble-badge pulse" />}
       </button>
     </div>
   );

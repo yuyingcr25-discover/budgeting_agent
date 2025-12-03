@@ -3,6 +3,8 @@ import type { AIService } from './types';
 
 export type { AIService, AIMessage, AIResponse, WizardContext, FieldSuggestion } from './types';
 export { getWelcomeMessage } from './prompts';
+export { getStepCompletion, getNextActionPrompt, hasFieldChanged, getFieldSuggestion, getStepSuggestions } from './completionTracker';
+export type { FieldStatus, StepCompletionStatus, FieldSuggestion as TrackerFieldSuggestion } from './completionTracker';
 
 let aiServiceInstance: AIService | null = null;
 
