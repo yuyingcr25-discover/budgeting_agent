@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send, Sparkles, XIcon, ChevronRight } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { X, Send, Sparkles, XIcon, ChevronRight, CheckCircle2, Circle } from 'lucide-react';
 import { useAssistantStore } from '../../store/assistantStore';
 import { useProjectStore } from '../../store/projectStore';
+import { getStepCompletion } from '../../services/ai';
 import type { FieldSuggestion } from '../../services/ai/types';
 
 export function FloatingAssistant() {
@@ -17,18 +18,33 @@ export function FloatingAssistant() {
     toggleOpen,
     sendMessage,
     initializeForStep,
+    checkProjectChanges,
     rejectSuggestions,
     isAvailable,
   } = useAssistantStore();
 
   const { currentProject, currentStep, setCurrentProject } = useProjectStore();
 
+  // Calculate step completion for progress display
+  const stepCompletion = useMemo(() => {
+    return getStepCompletion(currentStep, currentProject);
+  }, [currentStep, currentProject]);
+
   // Initialize assistant when step changes
   useEffect(() => {
     if (isAvailable()) {
       initializeForStep(currentStep, currentProject as unknown as Record<string, unknown>);
     }
-  }, [currentStep, initializeForStep, isAvailable, currentProject]);
+  // Only run when step changes, not on every project change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, initializeForStep, isAvailable]);
+
+  // Watch for project changes to provide proactive guidance
+  useEffect(() => {
+    if (isAvailable()) {
+      checkProjectChanges(currentProject, currentStep);
+    }
+  }, [currentProject, currentStep, checkProjectChanges, isAvailable]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -82,6 +98,29 @@ export function FloatingAssistant() {
             <button className="btn-icon" onClick={toggleOpen}>
               <X size={18} />
             </button>
+          </div>
+
+          {/* Progress indicator */}
+          <div className="assistant-progress">
+            <div className="progress-label">
+              Step {currentStep} Progress: {stepCompletion.completedCount}/{stepCompletion.requiredCount} required fields
+            </div>
+            <div className="progress-fields">
+              {stepCompletion.fields.filter(f => f.isRequired).map((field) => (
+                <div
+                  key={field.fieldId}
+                  className={`progress-field ${field.isComplete ? 'complete' : 'pending'}`}
+                  title={field.fieldName}
+                >
+                  {field.isComplete ? (
+                    <CheckCircle2 size={14} />
+                  ) : (
+                    <Circle size={14} />
+                  )}
+                  <span>{field.fieldName}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="assistant-messages">

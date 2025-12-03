@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { AIMessage, FieldSuggestion, WizardContext } from '../services/ai';
-import { getAIService, isAIAvailable, getWelcomeMessage } from '../services/ai';
+import { getAIService, isAIAvailable, getWelcomeMessage, getStepCompletion, getNextActionPrompt } from '../services/ai';
 import { industries, budgetTemplates, resourceManagers, roles } from '../data/referenceData';
+import type { Project } from '../types';
 
 interface PendingAction {
   id: string;
@@ -30,6 +31,9 @@ interface AssistantStore {
   toasts: Toast[];
   inlineSuggestions: Record<string, FieldSuggestion>;
   lastStep: number;
+  hasVisitedStep: Record<number, boolean>;
+  lastProjectSnapshot: Partial<Project> | null;
+  lastCompletedField: string | null;
 
   // Actions
   toggleOpen: () => void;
@@ -37,6 +41,9 @@ interface AssistantStore {
   sendMessage: (content: string, projectData: Record<string, unknown>, step: number) => Promise<void>;
   initializeForStep: (step: number, projectData: Record<string, unknown>) => void;
   clearMessages: () => void;
+
+  // Proactive guidance actions
+  checkProjectChanges: (project: Project, step: number) => void;
 
   // Suggestion actions
   setPendingAction: (action: PendingAction | null) => void;
@@ -78,6 +85,9 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   toasts: [],
   inlineSuggestions: {},
   lastStep: 0,
+  hasVisitedStep: {},
+  lastProjectSnapshot: null,
+  lastCompletedField: null,
 
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
 
@@ -138,11 +148,21 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   },
 
   initializeForStep: (step, projectData) => {
-    const { lastStep, messages } = get();
+    const { lastStep, messages, hasVisitedStep } = get();
+    const isFirstVisit = !hasVisitedStep[step];
 
     // Only add welcome message if step changed
     if (step !== lastStep) {
-      const welcomeMessage = getWelcomeMessage(step, projectData);
+      // Get completion status and build context-aware welcome
+      const completion = getStepCompletion(step, projectData as unknown as Project);
+      const nextActionHint = getNextActionPrompt(completion);
+
+      let welcomeMessage = getWelcomeMessage(step, projectData);
+
+      // Add completion status and next action hint
+      if (!completion.isComplete && nextActionHint) {
+        welcomeMessage += `\n\n${nextActionHint}`;
+      }
 
       // Keep conversation history but add new step context
       const newMessage: AIMessage = { role: 'assistant', content: welcomeMessage };
@@ -151,6 +171,10 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
         messages: messages.length === 0 ? [newMessage] : [...messages, newMessage],
         lastStep: step,
         inlineSuggestions: {},
+        hasVisitedStep: { ...hasVisitedStep, [step]: true },
+        lastProjectSnapshot: { ...(projectData as unknown as Partial<Project>) },
+        // Auto-open on first visit to help guide the user
+        isOpen: isFirstVisit ? true : get().isOpen,
       });
 
       // Try to get proactive suggestions for this step
@@ -172,6 +196,57 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   },
 
   clearMessages: () => set({ messages: [], lastStep: 0 }),
+
+  checkProjectChanges: (project, step) => {
+    const { lastProjectSnapshot, isLoading, messages } = get();
+
+    // Don't check if we're still loading or no snapshot exists
+    if (isLoading || !lastProjectSnapshot) return;
+
+    // Get completion status before and after
+    const previousCompletion = getStepCompletion(step, lastProjectSnapshot as Project);
+    const currentCompletion = getStepCompletion(step, project);
+
+    // Find newly completed fields
+    const newlyCompleted = currentCompletion.fields.filter((field) => {
+      const prevField = previousCompletion.fields.find(f => f.fieldId === field.fieldId);
+      return field.isComplete && prevField && !prevField.isComplete;
+    });
+
+    if (newlyCompleted.length > 0) {
+      // Update snapshot
+      set({ lastProjectSnapshot: { ...project }, lastCompletedField: newlyCompleted[0].fieldId });
+
+      // Celebrate completion and prompt for next action
+      const fieldNames = newlyCompleted.map(f => f.fieldName).join(', ');
+
+      if (currentCompletion.isComplete) {
+        // Step is fully complete
+        const successMessage: AIMessage = {
+          role: 'assistant',
+          content: `${fieldNames} completed! All required fields for this step are done. You can click "Next" to continue.`,
+        };
+        set({ messages: [...messages, successMessage] });
+
+        get().addToast({
+          message: `Step ${step} complete!`,
+          type: 'success',
+          duration: 3000,
+        });
+      } else {
+        // Still have more fields to fill
+        const nextHint = getNextActionPrompt(currentCompletion);
+        const progressMessage: AIMessage = {
+          role: 'assistant',
+          content: `${fieldNames} completed! ${nextHint || 'Keep going!'}`,
+        };
+        set({ messages: [...messages, progressMessage] });
+      }
+    } else {
+      // Just update snapshot for comparison
+      set({ lastProjectSnapshot: { ...project } });
+    }
+  },
 
   setPendingAction: (action) => set({ pendingAction: action }),
 
