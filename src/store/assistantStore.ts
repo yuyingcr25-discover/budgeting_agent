@@ -30,8 +30,6 @@ interface AssistantStore {
   toasts: Toast[];
   inlineSuggestions: Record<string, FieldSuggestion>;
   lastStep: number;
-  isGuideActive: boolean;
-  currentGuideField: string | null;
 
   // Actions
   toggleOpen: () => void;
@@ -46,10 +44,6 @@ interface AssistantStore {
   rejectSuggestions: () => void;
   setInlineSuggestion: (fieldId: string, suggestion: FieldSuggestion | null) => void;
   clearInlineSuggestions: () => void;
-
-  // Guide actions
-  setGuideActive: (active: boolean) => void;
-  setCurrentGuideField: (fieldId: string | null) => void;
 
   // Toast actions
   addToast: (toast: Omit<Toast, 'id'>) => void;
@@ -84,8 +78,6 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   toasts: [],
   inlineSuggestions: {},
   lastStep: 0,
-  isGuideActive: true,
-  currentGuideField: null,
 
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
 
@@ -218,10 +210,6 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   },
 
   clearInlineSuggestions: () => set({ inlineSuggestions: {} }),
-
-  setGuideActive: (active) => set({ isGuideActive: active }),
-
-  setCurrentGuideField: (fieldId) => set({ currentGuideField: fieldId }),
 
   addToast: (toast) => {
     const id = generateId();
