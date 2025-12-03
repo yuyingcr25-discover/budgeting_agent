@@ -2295,6 +2295,172 @@ body {
   color: var(--color-text);
 }
 
+/* Guide Controls */
+.guide-controls {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0;
+  margin-top: var(--space-2);
+}
+
+/* Clickable suggestion items */
+.suggestion-item.clickable {
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  transition: all var(--transition-base);
+}
+
+.suggestion-item.clickable:hover {
+  background: var(--color-primary-subtle);
+  transform: translateX(2px);
+}
+
+.suggestion-item.clickable .field-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.suggestion-item.clickable .field-value svg {
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.suggestion-item.clickable:hover .field-value svg {
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+/* ============================================
+   Driver.js Custom Styles
+   ============================================ */
+
+/* Override driver.js overlay */
+.driver-overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Custom popover styling */
+.driver-popover.field-guide-popover {
+  background: var(--color-bg-white) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: var(--shadow-xl) !important;
+  padding: 0 !important;
+  max-width: 320px !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-title {
+  font-family: var(--font-sans) !important;
+  font-size: var(--text-lg) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  padding: var(--space-4) var(--space-5) var(--space-2) !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-description {
+  font-family: var(--font-sans) !important;
+  font-size: var(--text-sm) !important;
+  color: var(--color-text-secondary) !important;
+  line-height: var(--leading-relaxed) !important;
+  padding: 0 var(--space-5) var(--space-4) !important;
+  margin: 0 !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-footer {
+  padding: var(--space-3) var(--space-5) !important;
+  border-top: 1px solid var(--color-border) !important;
+  background: var(--color-bg-subtle) !important;
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-footer button {
+  font-family: var(--font-sans) !important;
+  font-size: var(--text-sm) !important;
+  font-weight: 500 !important;
+  padding: var(--space-2) var(--space-4) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--transition-base) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-close-btn {
+  background: transparent !important;
+  color: var(--color-text-muted) !important;
+  border: none !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--radius-md) !important;
+  top: var(--space-3) !important;
+  right: var(--space-3) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-close-btn:hover {
+  background: var(--color-bg-hover) !important;
+  color: var(--color-text) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-prev-btn,
+.driver-popover.field-guide-popover .driver-popover-next-btn {
+  background: var(--color-primary) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-prev-btn:hover,
+.driver-popover.field-guide-popover .driver-popover-next-btn:hover {
+  background: var(--color-primary-dark) !important;
+}
+
+/* Highlighted element styling */
+.driver-active-element {
+  outline: 3px solid var(--color-primary) !important;
+  outline-offset: 3px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* Pulse animation for the highlighted element */
+@keyframes guidePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0);
+  }
+}
+
+.driver-active-element {
+  animation: guidePulse 2s ease-in-out infinite !important;
+}
+
+/* Arrow styling */
+.driver-popover.field-guide-popover .driver-popover-arrow {
+  border-color: var(--color-bg-white) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-arrow-side-left {
+  border-left-color: var(--color-bg-white) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-arrow-side-right {
+  border-right-color: var(--color-bg-white) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-arrow-side-top {
+  border-top-color: var(--color-bg-white) !important;
+}
+
+.driver-popover.field-guide-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--color-bg-white) !important;
+}
+
 /* Responsive adjustments for assistant */
 @media (max-width: 480px) {
   .floating-assistant {
@@ -2311,5 +2477,9 @@ body {
     right: var(--space-4);
     left: var(--space-4);
     max-width: none;
+  }
+
+  .driver-popover.field-guide-popover {
+    max-width: calc(100vw - 32px) !important;
   }
 }
