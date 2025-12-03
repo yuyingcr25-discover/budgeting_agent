@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FileText, Home, Settings } from 'lucide-react';
+import { FileText, Home, Settings, Moon, Sun } from 'lucide-react';
+import { useThemeStore } from '../../store/themeStore';
 
 export function Header() {
   const location = useLocation();
+  const { theme, toggleTheme } = useThemeStore();
 
   return (
     <header className="header">
@@ -29,9 +31,18 @@ export function Header() {
           </Link>
         </nav>
 
-        <div className="user-info">
-          <span>John Smith</span>
-          <div className="avatar">JS</div>
+        <div className="header-right">
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <div className="user-info">
+            <span>John Smith</span>
+            <div className="avatar">JS</div>
+          </div>
         </div>
       </div>
     </header>

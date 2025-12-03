@@ -1,4 +1,4 @@
-/* CSS Variables */
+/* CSS Variables - Light Theme (default) */
 :root {
   --color-primary: #2563eb;
   --color-primary-dark: #1d4ed8;
@@ -12,7 +12,8 @@
 
   --color-bg: #f8fafc;
   --color-bg-white: #ffffff;
-  --color-bg-dark: #1e293b;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: #f1f5f9;
   --color-border: #e2e8f0;
   --color-border-dark: #cbd5e1;
 
@@ -20,6 +21,9 @@
   --color-text-secondary: #64748b;
   --color-text-light: #94a3b8;
   --color-text-white: #ffffff;
+
+  --color-input-bg: #ffffff;
+  --color-table-row-alt: #f8fafc;
 
   --radius-sm: 4px;
   --radius-md: 8px;
@@ -31,6 +35,38 @@
 
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'SF Mono', Monaco, monospace;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-success: #22c55e;
+  --color-success-light: #4ade80;
+  --color-warning: #eab308;
+  --color-warning-light: #facc15;
+  --color-error: #ef4444;
+  --color-error-light: #f87171;
+
+  --color-bg: #0f172a;
+  --color-bg-white: #1e293b;
+  --color-bg-elevated: #334155;
+  --color-bg-hover: #334155;
+  --color-border: #334155;
+  --color-border-dark: #475569;
+
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-light: #64748b;
+  --color-text-white: #ffffff;
+
+  --color-input-bg: #1e293b;
+  --color-table-row-alt: #1e293b;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
 }
 
 /* Reset & Base */
@@ -46,6 +82,21 @@ body {
   color: var(--color-text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Theme transition for major elements */
+.header,
+.wizard-content,
+.wizard-nav,
+.project-card,
+.stat-card,
+.review-section,
+.gm-summary-card,
+.form-section,
+.budget-grid th,
+.demand-grid th {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 /* App Layout */
@@ -123,6 +174,32 @@ body {
 .nav-link.active {
   background: var(--color-primary);
   color: var(--color-text-white);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.theme-toggle:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text);
+  border-color: var(--color-border-dark);
 }
 
 .user-info {
@@ -599,7 +676,9 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 14px;
-  transition: border-color 0.15s;
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
 .form-group input:focus,
@@ -834,7 +913,7 @@ body {
 .budget-grid .sticky-col {
   position: sticky;
   left: 0;
-  background: white;
+  background: var(--color-bg-white);
   z-index: 5;
   min-width: 280px;
 }
@@ -897,7 +976,7 @@ body {
 }
 
 .work-item-row {
-  background: white;
+  background: var(--color-bg-white);
 }
 
 .work-item-cell {
@@ -926,6 +1005,8 @@ body {
   border-radius: var(--radius-sm);
   text-align: center;
   font-size: 13px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
 }
 
 .hours-input:focus {
@@ -1093,6 +1174,8 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 13px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
 }
 
 .table-input.number {
@@ -1106,6 +1189,8 @@ body {
   border-radius: var(--radius-sm);
   font-size: 13px;
   min-width: 120px;
+  background: var(--color-input-bg);
+  color: var(--color-text);
 }
 
 .calculated {
