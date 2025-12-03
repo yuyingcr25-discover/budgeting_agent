@@ -95,6 +95,12 @@
   --transition-fast: 0.1s ease;
   --transition-base: 0.15s ease;
   --transition-slow: 0.25s ease;
+
+  /* Select dropdown arrows (light mode) */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow-sm: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow-sm-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* ============================================
@@ -142,6 +148,12 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
   --shadow-focus: 0 0 0 3px rgba(59, 130, 246, 0.25);
+
+  /* Select dropdown arrow for dark mode */
+  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow-sm: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  --select-arrow-sm-hover: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2360a5fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
 
 /* ============================================
@@ -853,6 +865,18 @@ body {
   transition: all var(--transition-base);
 }
 
+.form-group select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: var(--space-10);
+  background-image: var(--select-arrow);
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
 .form-group input::placeholder {
   color: var(--color-input-placeholder);
 }
@@ -860,6 +884,11 @@ body {
 .form-group input:hover,
 .form-group select:hover {
   border-color: var(--color-border-dark);
+  background-color: var(--color-bg-hover);
+}
+
+.form-group select:hover {
+  background-image: var(--select-arrow-hover);
 }
 
 .form-group input:focus,
@@ -867,6 +896,10 @@ body {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: var(--shadow-focus);
+}
+
+.form-group select:focus {
+  background-image: var(--select-arrow-hover);
 }
 
 .form-row {
@@ -1470,21 +1503,35 @@ body {
 }
 
 .table-select {
-  padding: var(--space-2) var(--space-3);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
   border: 1px solid var(--color-input-border);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
   min-width: 140px;
   background: var(--color-input-bg);
+  background-image: var(--select-arrow-sm);
+  background-repeat: no-repeat;
+  background-position: right var(--space-2) center;
+  background-size: 14px;
   color: var(--color-text);
   cursor: pointer;
   transition: all var(--transition-base);
+}
+
+.table-select:hover {
+  border-color: var(--color-border-dark);
+  background-color: var(--color-bg-hover);
+  background-image: var(--select-arrow-sm-hover);
 }
 
 .table-select:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: var(--shadow-focus);
+  background-image: var(--select-arrow-sm-hover);
 }
 
 .calculated {
