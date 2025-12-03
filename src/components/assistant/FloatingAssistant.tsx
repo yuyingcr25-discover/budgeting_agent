@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { X, Send, Sparkles, XIcon, ChevronRight, CheckCircle2, Circle, Check } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useAssistantStore } from '../../store/assistantStore';
 import { useProjectStore } from '../../store/projectStore';
 import { getStepCompletion } from '../../services/ai';
@@ -154,7 +155,13 @@ export function FloatingAssistant() {
                     <Sparkles size={14} />
                   </div>
                 )}
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content">
+                  {msg.role === 'assistant' ? (
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
+                </div>
               </div>
             ))}
 

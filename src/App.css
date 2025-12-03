@@ -2525,6 +2525,79 @@ input[type="number"] {
   border-bottom-left-radius: var(--radius-sm);
 }
 
+/* Markdown styling in assistant messages */
+.message-assistant .message-content p {
+  margin: 0 0 var(--space-2) 0;
+}
+
+.message-assistant .message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.message-assistant .message-content strong {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.message-assistant .message-content em {
+  font-style: italic;
+}
+
+.message-assistant .message-content ul,
+.message-assistant .message-content ol {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+}
+
+.message-assistant .message-content li {
+  margin-bottom: var(--space-1);
+}
+
+.message-assistant .message-content li:last-child {
+  margin-bottom: 0;
+}
+
+.message-assistant .message-content code {
+  background: var(--color-bg);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.message-assistant .message-content pre {
+  background: var(--color-bg);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin: var(--space-2) 0;
+}
+
+.message-assistant .message-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.message-assistant .message-content blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding-left: var(--space-3);
+  margin: var(--space-2) 0;
+  color: var(--color-text-muted);
+}
+
+.message-assistant .message-content h1,
+.message-assistant .message-content h2,
+.message-assistant .message-content h3 {
+  font-weight: 600;
+  margin: var(--space-3) 0 var(--space-2) 0;
+}
+
+.message-assistant .message-content h1:first-child,
+.message-assistant .message-content h2:first-child,
+.message-assistant .message-content h3:first-child {
+  margin-top: 0;
+}
+
 /* Typing Indicator */
 .typing-indicator {
   display: flex;
