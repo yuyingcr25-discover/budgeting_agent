@@ -35,6 +35,7 @@ interface AssistantStore {
   hasVisitedStep: Record<number, boolean>;
   lastProjectSnapshot: Partial<Project> | null;
   lastCompletedField: string | null;
+  skippedFields: Set<string>;
 
   // Actions
   toggleOpen: () => void;
@@ -93,6 +94,7 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   hasVisitedStep: {},
   lastProjectSnapshot: null,
   lastCompletedField: null,
+  skippedFields: new Set<string>(),
 
   toggleOpen: () => set((state) => ({ isOpen: !state.isOpen })),
 
@@ -188,6 +190,7 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
         hasVisitedStep: { ...hasVisitedStep, [step]: true },
         lastProjectSnapshot: { ...project },
         quickSuggestion: firstSuggestion,
+        skippedFields: new Set<string>(), // Reset skipped fields for new step
         // Auto-open on first visit to help guide the user
         isOpen: isFirstVisit ? true : get().isOpen,
       });
@@ -275,34 +278,47 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   },
 
   offerNextFieldSuggestion: (project, step) => {
-    const { messages } = get();
+    const { messages, skippedFields } = get();
     const completion = getStepCompletion(step, project);
 
-    // Find the next incomplete field (required fields first, then optional)
-    const nextField = completion.nextIncompleteField;
-    if (!nextField) return;
+    // Find all incomplete fields (excluding skipped ones), required first then optional
+    const remainingFields = completion.fields.filter(
+      f => !f.isComplete && !skippedFields.has(f.fieldId)
+    );
 
-    // Get a suggestion for that field
-    const isOptional = !nextField.isRequired;
-    const suggestion = getFieldSuggestion(nextField.fieldId, project, isOptional);
+    // Sort: required fields first, then optional
+    remainingFields.sort((a, b) => {
+      if (a.isRequired && !b.isRequired) return -1;
+      if (!a.isRequired && b.isRequired) return 1;
+      return 0;
+    });
 
-    if (suggestion) {
-      const optionalLabel = isOptional ? ' (Optional)' : '';
-      const skipNote = isOptional ? ' Click "Skip" if you don\'t need this.' : '';
+    // Find the first field with a suggestion
+    for (const nextField of remainingFields) {
+      const isOptional = !nextField.isRequired;
+      const suggestion = getFieldSuggestion(nextField.fieldId, project, isOptional);
+
+      if (suggestion) {
+        const optionalLabel = isOptional ? ' (Optional)' : '';
+        const skipNote = isOptional ? ' Click "Skip" if you don\'t need this.' : '';
+        const progressMessage: AIMessage = {
+          role: 'assistant',
+          content: `Great progress! Next, let's set **${suggestion.fieldName}**${optionalLabel}. I'd suggest "${suggestion.displayValue}" (${suggestion.reason}). Click "Accept" to apply, or choose your own value.${skipNote}`,
+        };
+        set({
+          messages: [...messages, progressMessage],
+          quickSuggestion: suggestion,
+        });
+        return;
+      }
+    }
+
+    // No fields with suggestions available, just prompt
+    const nextHint = getNextActionPrompt(completion);
+    if (nextHint) {
       const progressMessage: AIMessage = {
         role: 'assistant',
-        content: `Great progress! Next, let's set **${suggestion.fieldName}**${optionalLabel}. I'd suggest "${suggestion.displayValue}" (${suggestion.reason}). Click "Accept" to apply, or choose your own value.${skipNote}`,
-      };
-      set({
-        messages: [...messages, progressMessage],
-        quickSuggestion: suggestion,
-      });
-    } else {
-      // No suggestion available, just prompt
-      const nextHint = getNextActionPrompt(completion);
-      const progressMessage: AIMessage = {
-        role: 'assistant',
-        content: nextHint || 'Keep going! Fill in the next field.',
+        content: nextHint,
       };
       set({ messages: [...messages, progressMessage] });
     }
@@ -370,14 +386,22 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
   },
 
   dismissQuickSuggestion: (project, step) => {
-    const { messages, quickSuggestion } = get();
+    const { messages, quickSuggestion, skippedFields } = get();
     const completion = getStepCompletion(step, project);
 
-    // Find the next suggestion after the skipped one
-    const skippedFieldId = quickSuggestion?.fieldId;
-    const nextField = completion.fields.find(f => !f.isComplete && f.fieldId !== skippedFieldId);
+    // Add the current field to skipped fields
+    const newSkippedFields = new Set(skippedFields);
+    if (quickSuggestion?.fieldId) {
+      newSkippedFields.add(quickSuggestion.fieldId);
+    }
 
-    if (nextField) {
+    // Find all remaining incomplete fields (excluding skipped ones)
+    const remainingFields = completion.fields.filter(
+      f => !f.isComplete && !newSkippedFields.has(f.fieldId)
+    );
+
+    // Iterate through remaining fields to find one with a suggestion
+    for (const nextField of remainingFields) {
       const isOptional = !nextField.isRequired;
       const nextSuggestion = getFieldSuggestion(nextField.fieldId, project, isOptional);
 
@@ -390,12 +414,13 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
         set({
           messages: [...messages, dismissMessage],
           quickSuggestion: nextSuggestion,
+          skippedFields: newSkippedFields,
         });
         return;
       }
     }
 
-    // No more fields or suggestions, check if required are done
+    // No more fields with suggestions, check if required are done
     if (completion.isRequiredComplete) {
       const doneMessage: AIMessage = {
         role: 'assistant',
@@ -404,6 +429,7 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
       set({
         messages: [...messages, doneMessage],
         quickSuggestion: null,
+        skippedFields: newSkippedFields,
       });
     } else {
       const dismissMessage: AIMessage = {
@@ -413,6 +439,7 @@ export const useAssistantStore = create<AssistantStore>((set, get) => ({
       set({
         messages: [...messages, dismissMessage],
         quickSuggestion: null,
+        skippedFields: newSkippedFields,
       });
     }
   },
