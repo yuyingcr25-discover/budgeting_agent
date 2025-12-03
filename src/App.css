@@ -2038,11 +2038,7 @@ input[type="number"] {
   }
 
   .logo span {
-    font-size: var(--text-sm);
-    max-width: 100px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none;
   }
 
   .nav {
@@ -2108,6 +2104,34 @@ input[type="number"] {
 
   .stat-card .stat-value {
     font-size: var(--text-2xl);
+  }
+
+  /* Wizard header mobile */
+  .wizard-header {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+  }
+
+  .wizard-header .btn {
+    order: 1;
+  }
+
+  .wizard-header .btn:first-child {
+    order: 0;
+  }
+
+  .wizard-header .project-title {
+    order: -1;
+    text-align: center;
+  }
+
+  .wizard-header .project-title h1 {
+    font-size: var(--text-lg);
+  }
+
+  .wizard-header .project-title .project-id {
+    font-size: var(--text-xs);
   }
 
   /* Wizard mobile */
@@ -2920,23 +2944,86 @@ input[type="number"] {
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .floating-assistant {
-    bottom: var(--space-4);
-    right: var(--space-4);
+    bottom: var(--space-3);
+    right: var(--space-3);
+  }
+
+  .assistant-bubble {
+    width: 48px;
+    height: 48px;
+  }
+
+  .assistant-bubble svg {
+    width: 20px;
+    height: 20px;
   }
 
   .assistant-panel {
-    width: calc(100vw - 32px);
-    max-height: 60vh;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 70vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    margin: 0;
+  }
+
+  .assistant-header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .assistant-messages {
+    padding: var(--space-3);
+    max-height: none;
+    flex: 1;
+  }
+
+  .assistant-input {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .message {
+    max-width: 85%;
+  }
+
+  .message-content {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .suggestion-card {
+    padding: var(--space-3);
+  }
+
+  .suggestion-item {
+    padding: var(--space-2);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .suggestion-item .field-value {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .toast-container {
-    left: var(--space-4);
-    right: var(--space-4);
-    bottom: var(--space-4);
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: 72px;
   }
 
   .toast {
     min-width: auto;
     max-width: none;
+    padding: var(--space-3);
+  }
+
+  .toast-content {
+    font-size: var(--text-sm);
   }
 }
