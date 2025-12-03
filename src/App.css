@@ -826,6 +826,17 @@ body {
    Form Elements
    ============================================ */
 
+/* Hide number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 .form-section {
   margin-bottom: var(--space-8);
   padding-bottom: var(--space-8);
