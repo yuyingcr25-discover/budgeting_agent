@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Settings, Moon, Sun } from 'lucide-react';
+import { Home, Settings, Moon, Sun, Sparkles, Layers, Zap } from 'lucide-react';
 import { useThemeStore } from '../../store/themeStore';
 import crLogoOrange from '../../assets/cr-logo-orange.png';
 import crLogoWhite from '../../assets/cr-logo-white.png';
@@ -27,6 +27,27 @@ export function Header() {
           >
             <Home size={18} />
             <span>Dashboard</span>
+          </Link>
+          <Link
+            to="/budgeting-agent"
+            className={`nav-link ${location.pathname === '/budgeting-agent' ? 'active' : ''}`}
+          >
+            <Zap size={18} />
+            <span>Budgeting Agent</span>
+          </Link>
+          <Link
+            to="/budgeting-agent-chat"
+            className={`nav-link ${location.pathname === '/budgeting-agent-chat' ? 'active' : ''}`}
+          >
+            <Sparkles size={18} />
+            <span>AI Budget Agent</span>
+          </Link>
+          <Link
+            to="/prototype"
+            className={`nav-link ${location.pathname === '/prototype' ? 'active' : ''}`}
+          >
+            <Layers size={18} />
+            <span>Prototype</span>
           </Link>
           <Link
             to="/admin"

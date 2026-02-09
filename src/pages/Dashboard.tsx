@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Plus, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, FileText, Clock, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { useProjectStore } from '../store/projectStore';
 
 export function Dashboard() {
@@ -33,10 +33,16 @@ export function Dashboard() {
           <h1>My Projects</h1>
           <p>Manage your project setup workbooks</p>
         </div>
-        <Link to="/project/new" className="btn btn-primary" onClick={() => resetProject()}>
-          <Plus size={18} />
-          New Project
-        </Link>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/budgeting-agent-chat" className="btn btn-secondary">
+            <Sparkles size={18} />
+            AI Budgeting Agent
+          </Link>
+          <Link to="/project/new" className="btn btn-primary" onClick={() => resetProject()}>
+            <Plus size={18} />
+            New Project
+          </Link>
+        </div>
       </div>
 
       {savedProjects.length === 0 ? (
