@@ -5,7 +5,7 @@ node_modules
 dist
 dist-ssr
 build
-
+.env
 # Logs
 logs
 *.log
